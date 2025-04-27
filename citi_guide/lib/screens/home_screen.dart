@@ -1,11 +1,13 @@
-import 'package:citi_guide/main.dart';
+import 'package:city_guide/helper/theme_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// ignore: depend_on_referenced_packages
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
+  // ignore: library_private_types_in_public_api
   _HomeScreenState createState() => _HomeScreenState();
 }
 
@@ -21,47 +23,51 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _fetchAttractions();
 
-    _supabase.from('attractions').stream(primaryKey: ['id']).listen((
-      List<Map<String, dynamic>> data,
-    ) {
-      setState(() {
-        _attractions = data.where((a) => a['city'] == _selectedCity).toList();
-      });
-    });
+    _supabase.from('attractions').stream(primaryKey: ['id']).listen(
+      (List<Map<String, dynamic>> data) {
+        setState(() {
+          _attractions = data.where((a) => a['city'] == _selectedCity).toList();
+        });
+      },
+      onError: (error) {
+      },
+    );
   }
 
-  void _fetchAttractions() async {
-    final response = await _supabase
-        .from('attractions')
-        .select()
-        .eq('city', _selectedCity);
+  Future<void> _fetchAttractions() async {
+    try {
+      final response = await _supabase
+          .from('attractions')
+          .select()
+          .eq('city', _selectedCity);
 
-    setState(() {
-      _attractions = List<Map<String, dynamic>>.from(response ?? []);
-    });
+      setState(() {
+        _attractions = List<Map<String, dynamic>>.from(response);
+      });
+    } catch (e) {
+      setState(() {
+        _attractions = [];
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('City Guide'),
+        title: const Text('City Guide'),
         actions: [
-          IconButton(
-            icon: Icon(Icons.person),
-            onPressed: () => Navigator.pushNamed(context, '/profile'),
-          ),
           Obx(() => themeController.mode.isTrue
               ? IconButton(
-                  icon: Icon(Icons.dark_mode),
+                  icon: const Icon(Icons.dark_mode),
                   onPressed: () {
-                    themeController.mode.value = false;
+                    themeController.toggleTheme(); // Use toggleTheme to persist
                   },
                 )
               : IconButton(
-                  icon: Icon(Icons.light_mode),
+                  icon: const Icon(Icons.light_mode),
                   onPressed: () {
-                    themeController.mode.value = true;
+                    themeController.toggleTheme(); // Use toggleTheme to persist
                   },
                 )),
         ],
@@ -69,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           Padding(
-            padding: EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16.0),
             child: DropdownButton<String>(
               value: _selectedCity,
               onChanged: (value) {
@@ -90,31 +96,39 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? Center(
                     child: Text(
                       'No attractions found for $_selectedCity.',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                   )
                 : ListView.builder(
                     itemCount: _attractions.length,
                     itemBuilder: (context, index) {
                       final attraction = _attractions[index];
-                      return ListTile(
-                        leading: attraction['image'] != null &&
-                                attraction['image'] != 'null'
-                            ? Image.network(
-                                attraction['image'],
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Icon(Icons.broken_image),
-                              )
-                            : Icon(Icons.image),
-                        title: Text(attraction['name'] ?? 'Unknown'),
-                        subtitle:
-                            Text(attraction['description'] ?? 'No description'),
+                      return GestureDetector(
                         onTap: () {
-                          // TODO: Navigate to detailed view
+                          Navigator.pushNamed(context, '/City', arguments: {
+                            'city': _selectedCity,
+                            'name': attraction['name'],
+                            'description': attraction['description_2'],
+                            'image': attraction['image'],
+                            'location': attraction['location'],
+                          });
                         },
+                        child: Card(
+                          child: ListTile(
+                            leading: Image.network(
+                              attraction['image'],
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(Icons.error);
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const CircularProgressIndicator();
+                              },
+                            ),
+                            title: Text(attraction['name']),
+                            subtitle: Text(attraction['description']),
+                          ),
+                        ),
                       );
                     },
                   ),
