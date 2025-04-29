@@ -14,19 +14,26 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ThemeController themeController = Get.find<ThemeController>();
   final _supabase = Supabase.instance.client;
-  String _selectedCity = 'Karachi';
-  final _cities = ['Lahore', 'Quetta', 'Peshawar', 'Karachi'];
+  String? _selectedCity;
+  List<String> _cities = [];
   List<Map<String, dynamic>> _attractions = [];
+  late String _selectedCountry;
 
   @override
   void initState() {
     super.initState();
-    _fetchAttractions();
+    // Get selected country from Get.arguments
+    _selectedCountry = Get.arguments['country'] ?? 'Unknown';
+    _fetchCitiesAndAttractions();
 
+    // Stream updates for attractions
     _supabase.from('attractions').stream(primaryKey: ['id']).listen(
       (List<Map<String, dynamic>> data) {
         setState(() {
-          _attractions = data.where((a) => a['city'] == _selectedCity).toList();
+          _attractions = data
+              .where((a) =>
+                  a['city'] == _selectedCity && a['countries'] == _selectedCountry)
+              .toList();
         });
       },
       onError: (error) {
@@ -34,12 +41,46 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _fetchCitiesAndAttractions() async {
+    try {
+      // Fetch unique cities for the selected country
+      final cityResponse = await _supabase
+          .from('attractions')
+          .select('city')
+          .eq('countries', _selectedCountry);
+
+      final cityData = cityResponse as List<dynamic>;
+      final cities = cityData
+          .map((item) => item['city'] as String)
+          .toSet()
+          .toList()
+        ..sort();
+
+      setState(() {
+        _cities = cities;
+        _selectedCity = cities.isNotEmpty ? cities[0] : null;
+      });
+
+      // Fetch attractions for the initial city
+      if (_selectedCity != null) {
+        await _fetchAttractions();
+      }
+    } catch (e) {
+      setState(() {
+        _cities = [];
+        _selectedCity = null;
+        _attractions = [];
+      });
+    }
+  }
+
   Future<void> _fetchAttractions() async {
     try {
       final response = await _supabase
           .from('attractions')
           .select()
-          .eq('city', _selectedCity);
+          .eq('city', _selectedCity!)
+          .eq('countries', _selectedCountry);
 
       setState(() {
         _attractions = List<Map<String, dynamic>>.from(response);
@@ -61,13 +102,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ? IconButton(
                   icon: const Icon(Icons.dark_mode),
                   onPressed: () {
-                    themeController.toggleTheme(); // Use toggleTheme to persist
+                    themeController.toggleTheme();
                   },
                 )
               : IconButton(
                   icon: const Icon(Icons.light_mode),
                   onPressed: () {
-                    themeController.toggleTheme(); // Use toggleTheme to persist
+                    themeController.toggleTheme();
                   },
                 )),
         ],

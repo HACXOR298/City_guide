@@ -1,4 +1,5 @@
 import 'package:city_guide/helper/theme_controller.dart';
+import 'package:city_guide/screens/country_select_screen.dart';
 import 'package:city_guide/screens/city_desc.dart';
 import 'package:city_guide/screens/home_screen.dart';
 import 'package:city_guide/services/supabaseservice.dart';
@@ -26,11 +27,12 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.light(), // Define your light theme
       darkTheme: ThemeData.dark(), // Define your dark theme
       themeMode: ThemeMode.system, // Will be controlled by ThemeController
-      initialRoute: '/',
+      initialRoute: 'select',
       getPages: [
         GetPage(name: '/', page: () => const HomeScreen()),
 
         GetPage(name: '/City', page: () => CityDesc()),
+        GetPage(name: '/select', page: () => CountrySelectScreen()),
       ],
     );
   }

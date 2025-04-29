@@ -80,10 +80,10 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
-  #   - family: myfonts
-  #     fonts:
-  #       - asset: assets\fonts\Poppins-Black.ttf
+  fonts:
+    - family: myfonts
+      fonts:
+        - asset: assets\fonts\GreatVibes-Regular.ttf
   #         weight: 100
   #       - asset: assets\fonts\Poppins-ExtraBold.ttf
   #         weight: 900
